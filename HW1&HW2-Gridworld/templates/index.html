@@ -1,0 +1,1027 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>強化學習網格世界 (Reinforcement Learning Gridworld)</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        .container {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            gap: 20px;
+        }
+        .grid-container {
+            flex: 1;
+            min-width: 400px;
+        }
+        .controls {
+            flex: 1;
+            min-width: 300px;
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .grid {
+            display: grid;
+            grid-gap: 2px;
+            margin: 20px 0;
+            width: 100%;
+            aspect-ratio: 1;
+            background-color: #ddd;
+            border: 2px solid #333;
+        }
+        .cell {
+            background-color: white;
+            border: 1px solid #ccc;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            position: relative;
+            transition: background-color 0.2s;
+        }
+        .cell:hover {
+            background-color: #f0f0f0;
+        }
+        .cell.start {
+            background-color: #90EE90;  /* Light green */
+        }
+        .cell.goal {
+            background-color: #FF6347;  /* Red */
+        }
+        .cell.dead {
+            background-color: #87CEFA;  /* Light blue */
+        }
+        .cell.obstacle {
+            background-color: #808080;  /* Gray */
+        }
+        .cell.path {
+            background-color: #FFD700;  /* Gold */
+        }
+        .cell.current {
+            background-color: #FFA500;  /* Orange */
+        }
+        .arrow {
+            font-size: 20px;
+            font-weight: bold;
+        }
+        .value {
+            position: absolute;
+            bottom: 2px;
+            right: 2px;
+            font-size: 10px;
+            color: #333;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, button, select {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+            margin-bottom: 10px;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        .legend {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            margin-top: 20px;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            margin-right: 5px;
+            border: 1px solid #ccc;
+        }
+        .info {
+            background-color: #e7f3fe;
+            border-left: 6px solid #2196F3;
+            padding: 10px;
+            margin-bottom: 15px;
+        }
+        .status {
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #f9f9f9;
+            border-radius: 4px;
+            border-left: 4px solid #4CAF50;
+        }
+        .animation-controls {
+            margin-top: 20px;
+            text-align: center;
+        }
+        .animation-controls button {
+            width: auto;
+            margin: 0 5px;
+            padding: 8px 15px;
+        }
+        .step-instructions {
+            background-color: #fffde7;
+            border-left: 6px solid #ffd600;
+            padding: 10px;
+            margin-bottom: 15px;
+        }
+        .header-section {
+            background-color: #e8f5e9;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .step-list {
+            list-style-type: none;
+            padding-left: 0;
+        }
+        .step-list li {
+            padding: 5px;
+            margin-bottom: 5px;
+            border-left: 3px solid #4CAF50;
+            padding-left: 10px;
+            background-color: #f9f9f9;
+        }
+        .primary-button {
+            background-color: #4CAF50;
+            color: white;
+            font-weight: bold;
+            padding: 10px 15px;
+            font-size: 16px;
+        }
+        #click-mode-info {
+            margin-top: 10px;
+            font-style: italic;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <h1>強化學習網格世界 (RL Gridworld)</h1>
+    
+    <div class="container">
+        <div class="grid-container">
+            <div class="grid" id="grid"></div>
+            
+            <div class="legend">
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: #90EE90;"></div>
+                    <span>起點</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: #FF6347;"></div>
+                    <span>終點</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: #808080;"></div>
+                    <span>障礙物</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: white;"></div>
+                    <span>空地</span>
+                </div>
+                <div class="legend-item">
+                    <div class="legend-color" style="background-color: #FFD700;"></div>
+                    <span>解決路徑</span>
+                </div>
+            </div>
+            
+            <div class="animation-controls" style="display: none;" id="animation-controls">
+                <button id="start-animation">開始動畫</button>
+                <button id="reset-animation">重置</button>
+                <div>
+                    <label for="animation-speed">動畫速度:</label>
+                    <select id="animation-speed">
+                        <option value="1000">慢</option>
+                        <option value="500" selected>中</option>
+                        <option value="250">快</option>
+                    </select>
+                </div>
+            </div>
+            
+            <div class="animation-controls" style="display: none;" id="learning-animation-controls">
+                <button id="start-learning-animation">開始學習動畫</button>
+                <button id="pause-learning-animation">暫停</button>
+                <button id="reset-learning-animation">重置</button>
+                <div>
+                    <label for="learning-animation-speed">動畫速度:</label>
+                    <select id="learning-animation-speed">
+                        <option value="2000">慢</option>
+                        <option value="1000" selected>中</option>
+                        <option value="500">快</option>
+                    </select>
+                </div>
+                <div id="learning-step-info" style="margin-top: 10px; font-weight: bold;"></div>
+            </div>
+            
+            <div class="status" id="status">
+                請選擇網格大小並點擊「產生網格」按鈕。
+            </div>
+        </div>
+        
+        <div class="controls">
+            <div class="info">
+                <p>這個網格世界模擬讓您體驗強化學習的概念。</p>
+            </div>
+            
+            <div class="step-instructions">
+                <h3>使用步驟：</h3>
+                <ol>
+                    <li>設置網格大小並點擊「產生網格」</li>
+                    <li>或者手動設置：點擊格子設置起始位置（綠色）→ 目標位置（紅色）→ 障礙物（灰色）</li>
+                    <li>然後點擊「模擬學習過程」開始學習動畫</li>
+                </ol>
+            </div>
+            
+            <div class="form-group">
+                <label for="grid-size">網格大小 (3-9):</label>
+                <input type="number" id="grid-size" min="3" max="9" value="5">
+            </div>
+            
+            <button id="generate-grid">產生網格</button>
+            <button id="simulate-learning">模擬學習過程</button>
+            
+            <div class="form-group" style="margin-top: 20px;">
+                <h3>點擊格子設置:</h3>
+                <div id="click-mode-info">
+                    點擊格子依次設置: 起始位置 → 目標位置 → 障礙物
+                </div>
+            </div>
+            
+            <div id="config-info" class="config-info"></div>
+            <div id="status" class="status"></div>
+        </div>
+    </div>
+    
+    <script>
+        let gridSize = 5;
+        let startPosition = null;
+        let goalPosition = null;
+        let obstacles = [];
+        let policy = [];
+        let stateValues = [];
+        let solutionPath = [];
+        let animationInterval = null;
+        let currentPathIndex = 0;
+        
+        let learningSteps = [];
+        let currentLearningStep = 0;
+        let learningAnimationInterval = null;
+        
+        // Arrow characters for each direction
+        const arrows = ["←", "↓", "→", "↑"];
+        
+        // Track the current setup mode
+        let setupMode = 'start';  // start, goal, obstacle
+        
+        // Initialize the page
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('generate-grid').addEventListener('click', generateGrid);
+            document.getElementById('simulate-learning').addEventListener('click', simulateLearning);
+            document.getElementById('start-animation').addEventListener('click', startAnimation);
+            document.getElementById('reset-animation').addEventListener('click', resetAnimation);
+            document.getElementById('start-learning-animation').addEventListener('click', startLearningAnimation);
+            document.getElementById('pause-learning-animation').addEventListener('click', pauseLearningAnimation);
+            document.getElementById('reset-learning-animation').addEventListener('click', resetLearningAnimation);
+            
+            // Initial grid generation
+            generateGrid();
+        });
+        
+        function generateGrid() {
+            const sizeInput = document.getElementById('grid-size');
+            gridSize = parseInt(sizeInput.value);
+            
+            if (isNaN(gridSize) || gridSize < 3 || gridSize > 9) {
+                gridSize = 5;
+                sizeInput.value = 5;
+            }
+            
+            // Reset state
+            startPosition = null;
+            goalPosition = null;  // Reset goal position too
+            obstacles = [];
+            solutionPath = [];
+            setupMode = 'start';  // Reset setup mode to start
+            <!-- document.getElementById('animation-controls').style.display = 'none'; -->
+            document.getElementById('learning-animation-controls').style.display = 'none';
+            
+            // API call to initialize the grid
+            fetch('/initialize_grid', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ size: gridSize }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.size) {
+                    gridSize = data.size;
+                    policy = data.policy;
+                    
+                    // Create the grid
+                    createGridUI();
+                    updateConfigInfo();
+                    document.getElementById('status').innerText = "請點擊一個格子設置起始位置。";
+                    document.getElementById('click-mode-info').innerText = "點擊格子設置: 起始位置";
+                }
+            })
+            .catch(error => {
+                console.error('Error initializing grid:', error);
+            });
+        }
+        
+        function createGridUI() {
+            const grid = document.getElementById('grid');
+            grid.innerHTML = '';
+            
+            // Set the grid template
+            grid.style.gridTemplateColumns = `repeat(${gridSize}, 1fr)`;
+            
+            // Create cells
+            for (let i = 0; i < gridSize; i++) {
+                for (let j = 0; j < gridSize; j++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    cell.dataset.row = i;
+                    cell.dataset.col = j;
+                    
+                    // Add cell number
+                    const cellNumber = document.createElement('div');
+                    cellNumber.className = 'cell-number';
+                    cellNumber.innerText = i * gridSize + j + 1;
+                    cell.appendChild(cellNumber);
+                    
+                    // Add arrow for policy direction
+                    const arrow = document.createElement('div');
+                    arrow.className = 'arrow';
+                    arrow.innerText = arrows[policy[i][j]];
+                    cell.appendChild(arrow);
+                    
+                    // Add value placeholder
+                    const valueElem = document.createElement('div');
+                    valueElem.className = 'value';
+                    valueElem.innerText = '0.0';
+                    cell.appendChild(valueElem);
+                    
+                    // Add special cell classes
+                    if (goalPosition && i === goalPosition[0] && j === goalPosition[1]) {
+                        cell.classList.add('goal');
+                    }
+                    
+                    // Add click event
+                    cell.addEventListener('click', () => handleCellClick(i, j));
+                    
+                    grid.appendChild(cell);
+                }
+            }
+        }
+        
+        function handleCellClick(row, col) {
+            // Automatically determine what to do based on current state
+            if (setupMode === 'start') {
+                setStartPosition(row, col);
+                setupMode = 'goal';
+                document.getElementById('click-mode-info').innerText = '請點擊設置目標位置';
+                document.getElementById('status').innerText = "起始位置已設置。請設置目標位置。";
+            } else if (setupMode === 'goal') {
+                setGoalPosition(row, col);
+                setupMode = 'obstacle';
+                document.getElementById('click-mode-info').innerText = '請點擊設置障礙物';
+                document.getElementById('status').innerText = "目標位置已設置。請設置障礙物。";
+            } else if (setupMode === 'obstacle') {
+                toggleObstacle(row, col);
+                // Stay in obstacle mode to allow multiple obstacles
+            }
+        }
+        
+        function setStartPosition(row, col) {
+            // Check if the position is already a special cell
+            if ((goalPosition && row === goalPosition[0] && col === goalPosition[1]) || 
+                obstacles.some(pos => pos[0] === row && pos[1] === col)) {
+                return;
+            }
+            
+            fetch('/set_start', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ row, col }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Clear previous start position and solution path
+                    if (startPosition !== null) {
+                        const previousCell = document.querySelector(`.cell[data-row="${startPosition[0]}"][data-col="${startPosition[1]}"]`);
+                        if (previousCell) {
+                            previousCell.classList.remove('start');
+                        }
+                    }
+                    resetCellClasses('path');
+                    resetCellClasses('current');
+                    
+                    // Set new start position
+                    startPosition = [row, col];  // Make sure this is an array
+                    const cell = document.querySelector(`.cell[data-row="${row}"][data-col="${col}"]`);
+                    if (cell) {
+                        cell.classList.add('start');
+                    }
+                    
+                    updateConfigInfo();
+
+                    // Hide animation controls since path has changed
+                    document.getElementById('animation-controls').style.display = 'none';
+                    document.getElementById('learning-animation-controls').style.display = 'none';
+                    solutionPath = [];
+                }
+            })
+            .catch(error => {
+                console.error('Error setting start position:', error);
+            });
+        }
+        
+        function setGoalPosition(row, col) {
+            // Check if the position is already a special cell
+            if ((startPosition && row === startPosition[0] && col === startPosition[1]) || 
+                obstacles.some(pos => pos[0] === row && pos[1] === col)) {
+                return;
+            }
+            
+            fetch('/set_goal', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ row, col }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Clear previous goal position and solution path
+                    if (goalPosition !== null) {
+                        const previousCell = document.querySelector(`.cell[data-row="${goalPosition[0]}"][data-col="${goalPosition[1]}"]`);
+                        if (previousCell) {
+                            previousCell.classList.remove('goal');
+                        }
+                    }
+                    resetCellClasses('path');
+                    resetCellClasses('current');
+                    
+                    // Set new goal position
+                    goalPosition = [row, col];  // Make sure this is an array
+                    const cell = document.querySelector(`.cell[data-row="${row}"][data-col="${col}"]`);
+                    if (cell) {
+                        cell.classList.add('goal');
+                    }
+                    
+                    updateConfigInfo();
+                    
+                    // Hide animation controls since path has changed
+                    document.getElementById('animation-controls').style.display = 'none';
+                    document.getElementById('learning-animation-controls').style.display = 'none';
+                    solutionPath = [];
+                }
+            })
+            .catch(error => {
+                console.error('Error setting goal position:', error);
+            });
+        }
+        
+        function toggleObstacle(row, col) {
+            // Check if the position is already a special cell
+            if ((startPosition && row === startPosition[0] && col === startPosition[1]) || 
+                (goalPosition && row === goalPosition[0] && col === goalPosition[1]) ||
+                obstacles.some(pos => pos[0] === row && pos[1] === col)) {
+                return;
+            }
+            
+            fetch('/toggle_obstacle', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ row, col }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const cell = document.querySelector(`.cell[data-row="${row}"][data-col="${col}"]`);
+                    
+                    if (data.action === 'added') {
+                        cell.classList.add('obstacle');
+                        obstacles.push([row, col]);
+                    } else if (data.action === 'removed') {
+                        cell.classList.remove('obstacle');
+                        obstacles = obstacles.filter(pos => !(pos[0] === row && pos[1] === col));
+                    }
+                    
+                    updateConfigInfo();
+                    
+                    // Hide animation controls since obstacles have changed
+                    document.getElementById('animation-controls').style.display = 'none';
+                    document.getElementById('learning-animation-controls').style.display = 'none';
+                    solutionPath = [];
+                    resetCellClasses('path');
+                    resetCellClasses('current');
+                } else if (data.message) {
+                    document.getElementById('status').innerText = data.message;
+                }
+            })
+            .catch(error => {
+                console.error('Error toggling obstacle:', error);
+            });
+        }
+        
+        function randomizePolicy() {
+            fetch('/randomize_policy', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({}),
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    policy = data.policy;
+                    
+                    // Update arrows in the UI
+                    for (let i = 0; i < gridSize; i++) {
+                        for (let j = 0; j < gridSize; j++) {
+                            const cell = document.querySelector(`.cell[data-row="${i}"][data-col="${j}"]`);
+                            if (cell) {
+                                const arrow = cell.querySelector('.arrow');
+                                if (arrow) {
+                                    arrow.innerText = arrows[policy[i][j]];
+                                }
+                            }
+                        }
+                    }
+                    
+                    document.getElementById('status').innerText = "策略已隨機化。您現在可以評估策略。";
+                    
+                    // Hide animation controls since policy has changed
+                    document.getElementById('animation-controls').style.display = 'none';
+                    document.getElementById('learning-animation-controls').style.display = 'none';
+                    solutionPath = [];
+                    resetCellClasses('path');
+                    resetCellClasses('current');
+                }
+            })
+            .catch(error => {
+                console.error('Error randomizing policy:', error);
+            });
+        }
+        
+        function evaluatePolicy() {
+            if (startPosition === null) {
+                document.getElementById('status').innerText = "請先設置起始位置。";
+                return;
+            }
+            
+            fetch('/evaluate_policy', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({}),
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    stateValues = data.values;
+                    solutionPath = data.path;
+                    
+                    // Update values in the UI
+                    for (let i = 0; i < gridSize; i++) {
+                        for (let j = 0; j < gridSize; j++) {
+                            const cell = document.querySelector(`.cell[data-row="${i}"][data-col="${j}"]`);
+                            if (cell) {
+                                const valueElem = cell.querySelector('.value');
+                                if (valueElem) {
+                                    valueElem.innerText = stateValues[i][j];
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Clear any existing path visualization
+                    resetCellClasses('path');
+                    resetCellClasses('current');
+                    
+                    // Display solution path if available
+                    if (solutionPath && solutionPath.length > 0) {
+                        document.getElementById('animation-controls').style.display = 'block';
+                    }
+                    
+                    document.getElementById('status').innerText = 
+                        `策略評估完成，共執行 ${data.iterations} 次迭代。每個格子顯示狀態值。路徑長度: ${solutionPath.length} 步。`;
+                } else if (data.message) {
+                    document.getElementById('status').innerText = data.message;
+                }
+            })
+            .catch(error => {
+                console.error('Error evaluating policy:', error);
+            });
+        }
+        
+        function runValueIteration() {
+            if (startPosition === null) {
+                document.getElementById('status').innerText = "請先設置起始位置。";
+                return;
+            }
+            
+            if (goalPosition === null) {
+                document.getElementById('status').innerText = "請先設置目標位置。";
+                return;
+            }
+            
+            fetch('/value_iteration', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({}),
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    policy = data.policy;
+                    stateValues = data.values;
+                    solutionPath = data.path;
+                    
+                    // Update arrows and values in the UI
+                    for (let i = 0; i < gridSize; i++) {
+                        for (let j = 0; j < gridSize; j++) {
+                            const cell = document.querySelector(`.cell[data-row="${i}"][data-col="${j}"]`);
+                            if (cell) {
+                                const arrow = cell.querySelector('.arrow');
+                                if (arrow) {
+                                    arrow.innerText = arrows[policy[i][j]];
+                                }
+                                
+                                const valueElem = cell.querySelector('.value');
+                                if (valueElem) {
+                                    valueElem.innerText = stateValues[i][j];
+                                }
+                            }
+                        }
+                    }
+                    
+                    // Clear any existing path visualization
+                    resetCellClasses('path');
+                    resetCellClasses('current');
+                    
+                    // Display solution path if available
+                    if (solutionPath && solutionPath.length > 0) {
+                        document.getElementById('animation-controls').style.display = 'block';
+                    }
+                    
+                    document.getElementById('status').innerText = 
+                        `價值迭代完成，共執行 ${data.iterations} 次迭代。每個格子顯示狀態值。路徑長度: ${solutionPath.length} 步。`;
+                } else if (data.message) {
+                    document.getElementById('status').innerText = data.message;
+                }
+            })
+            .catch(error => {
+                console.error('Error running value iteration:', error);
+            });
+        }
+        
+        function startAnimation() {
+            // Clear any existing animation and path visualization
+            if (animationInterval) {
+                clearInterval(animationInterval);
+            }
+            resetCellClasses('path');
+            resetCellClasses('current');
+            
+            // Start from the beginning
+            currentPathIndex = 0;
+            
+            if (solutionPath.length > 0) {
+                // Get animation speed
+                const speed = parseInt(document.getElementById('animation-speed').value);
+                
+                // Start the animation
+                animationInterval = setInterval(() => {
+                    // Clear current position
+                    resetCellClasses('current');
+                    
+                    // If we're at the end of the path, stop the animation
+                    if (currentPathIndex >= solutionPath.length) {
+                        clearInterval(animationInterval);
+                        return;
+                    }
+                    
+                    // Get current position in the path
+                    const pos = solutionPath[currentPathIndex];
+                    const row = pos[0];
+                    const col = pos[1];
+                    
+                    // Highlight path up to current position
+                    for (let i = 0; i < currentPathIndex; i++) {
+                        const pathPos = solutionPath[i];
+                        const pathCell = document.querySelector(`.cell[data-row="${pathPos[0]}"][data-col="${pathPos[1]}"]`);
+                        if (pathCell && !pathCell.classList.contains('start') && 
+                            !pathCell.classList.contains('goal')) {
+                            pathCell.classList.add('path');
+                        }
+                    }
+                    
+                    // Highlight current position
+                    const currentCell = document.querySelector(`.cell[data-row="${row}"][data-col="${col}"]`);
+                    if (currentCell && !currentCell.classList.contains('start') && 
+                        !currentCell.classList.contains('goal')) {
+                        currentCell.classList.add('current');
+                    }
+                    
+                    // Move to next position
+                    currentPathIndex++;
+                    
+                    // If we've reached the goal, stop the animation
+                    if (goalPosition && row === goalPosition[0] && col === goalPosition[1]) {
+                        clearInterval(animationInterval);
+                    }
+                }, speed);
+            }
+        }
+        
+        function resetAnimation() {
+            // Clear any existing animation
+            if (animationInterval) {
+                clearInterval(animationInterval);
+            }
+            
+            // Reset path visualization
+            resetCellClasses('path');
+            resetCellClasses('current');
+            
+            // Reset path index
+            currentPathIndex = 0;
+        }
+        
+        function resetCellClasses(className) {
+            const cells = document.querySelectorAll(`.cell.${className}`);
+            cells.forEach(cell => {
+                cell.classList.remove(className);
+            });
+        }
+        
+        function updateConfigInfo() {
+            let info = `網格大小: ${gridSize}x${gridSize}<br>`;
+            
+            if (startPosition) {
+                info += `起始位置: (${startPosition[0]}, ${startPosition[1]})<br>`;
+            } else {
+                info += `起始位置: 未設置<br>`;
+            }
+            
+            if (goalPosition) {
+                info += `目標位置: (${goalPosition[0]}, ${goalPosition[1]})<br>`;
+            }
+            
+            info += `障礙物數量: ${obstacles.length}/${gridSize - 2} (最多)`;
+            
+            document.getElementById('config-info').innerHTML = info;
+        }
+        
+        function simulateLearning() {
+            if (startPosition === null) {
+                document.getElementById('status').innerText = "請先設置起始位置。";
+                return;
+            }
+            
+            if (goalPosition === null) {
+                document.getElementById('status').innerText = "請先設置目標位置。";
+                return;
+            }
+            
+            // Show loading message
+            document.getElementById('status').innerText = "正在模擬學習過程...";
+            
+            fetch('/simulate_learning', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({}),
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    learningSteps = data.learning_steps;
+                    currentLearningStep = 0;
+                    
+                    // Reset any existing animations
+                    if (learningAnimationInterval) {
+                        clearInterval(learningAnimationInterval);
+                    }
+                    
+                    // Show learning animation controls
+                    document.getElementById('learning-animation-controls').style.display = 'block';
+                    document.getElementById('animation-controls').style.display = 'none';
+                    
+                    document.getElementById('status').innerText = 
+                        `學習模擬準備就緒，共 ${learningSteps.length} 個學習步驟。`;
+                    
+                    // Display initial step info
+                    document.getElementById('learning-step-info').innerText = 
+                        learningSteps[0].message;
+                    
+                    // Set animation speed to fast
+                    document.getElementById('learning-animation-speed').value = '500';
+                    
+                    // Automatically start the animation
+                    setTimeout(() => {
+                        startLearningAnimation();
+                    }, 500);
+                } else if (data.message) {
+                    document.getElementById('status').innerText = data.message;
+                }
+            })
+            .catch(error => {
+                console.error('Error simulating learning:', error);
+                document.getElementById('status').innerText = "模擬學習過程時發生錯誤。";
+            });
+        }
+        
+        function startLearningAnimation() {
+            // Clear any existing animation
+            if (learningAnimationInterval) {
+                clearInterval(learningAnimationInterval);
+            }
+            
+            // Get animation speed
+            const speed = parseInt(document.getElementById('learning-animation-speed').value);
+            
+            // Start the animation
+            learningAnimationInterval = setInterval(() => {
+                // If we're at the end of the steps, stop the animation
+                if (currentLearningStep >= learningSteps.length) {
+                    clearInterval(learningAnimationInterval);
+                    document.getElementById('status').innerText = "學習模擬完成。";
+                    return;
+                }
+                
+                // Get current learning step
+                const step = learningSteps[currentLearningStep];
+                
+                // Update policy arrows
+                for (let i = 0; i < gridSize; i++) {
+                    for (let j = 0; j < gridSize; j++) {
+                        const cell = document.querySelector(`.cell[data-row="${i}"][data-col="${j}"]`);
+                        if (cell) {
+                            const arrow = cell.querySelector('.arrow');
+                            if (arrow && step.policy[i] && step.policy[i][j] !== undefined) {
+                                arrow.innerText = arrows[step.policy[i][j]];
+                            }
+                            
+                            const valueElem = cell.querySelector('.value');
+                            if (valueElem && step.values[i] && step.values[i][j] !== undefined) {
+                                valueElem.innerText = step.values[i][j];
+                            }
+                        }
+                    }
+                }
+                
+                // Clear previous path
+                resetCellClasses('path');
+                resetCellClasses('current');
+                
+                // 重新標記起點與目標，確保動畫從使用者指定的起點開始
+                const startCell = document.querySelector(`.cell[data-row="${startPosition[0]}"][data-col="${startPosition[1]}"]`);
+                if (startCell) startCell.classList.add('start');
+                const goalCell = document.querySelector(`.cell[data-row="${goalPosition[0]}"][data-col="${goalPosition[1]}"]`);
+                if (goalCell) goalCell.classList.add('goal');
+
+                // 顯示目前這一步驟的路徑
+                if (step.path && step.path.length > 0) {
+                    for (let i = 0; i < step.path.length; i++) {
+                        const pos = step.path[i];
+                        const pathCell = document.querySelector(`.cell[data-row="${pos[0]}"][data-col="${pos[1]}"]`);
+                        if (pathCell && !pathCell.classList.contains('start') && !pathCell.classList.contains('goal')) {
+                            pathCell.classList.add('path');
+                        }
+                    }
+                }
+                
+                // Update step info
+                document.getElementById('learning-step-info').innerText = step.message;
+                
+                // Move to next step
+                currentLearningStep++;
+                
+            }, speed);
+        }
+        
+        function pauseLearningAnimation() {
+            if (learningAnimationInterval) {
+                clearInterval(learningAnimationInterval);
+                learningAnimationInterval = null;
+            }
+        }
+        
+        function resetLearningAnimation() {
+            // Clear any existing animation
+            if (learningAnimationInterval) {
+                clearInterval(learningAnimationInterval);
+                learningAnimationInterval = null;
+            }
+            
+            // Reset to initial state
+            currentLearningStep = 0;
+            
+            // Clear path visualization
+            resetCellClasses('path');
+            resetCellClasses('current');
+            
+            // Reset policy and values display to initial state
+            if (learningSteps.length > 0) {
+                const initialStep = learningSteps[0];
+                
+                // Update policy arrows
+                for (let i = 0; i < gridSize; i++) {
+                    for (let j = 0; j < gridSize; j++) {
+                        const cell = document.querySelector(`.cell[data-row="${i}"][data-col="${j}"]`);
+                        if (cell) {
+                            const arrow = cell.querySelector('.arrow');
+                            if (arrow && initialStep.policy[i] && initialStep.policy[i][j] !== undefined) {
+                                arrow.innerText = arrows[initialStep.policy[i][j]];
+                            }
+                            
+                            const valueElem = cell.querySelector('.value');
+                            if (valueElem) {
+                                valueElem.innerText = '0.0';
+                            }
+                        }
+                    }
+                }
+                
+                // Update step info
+                document.getElementById('learning-step-info').innerText = initialStep.message;
+            }
+        }
+        
+        // Function to update cell classes based on global state
+        function updateCellClasses() {
+            // Clear all special cell classes
+            document.querySelectorAll('.cell').forEach(cell => {
+                cell.classList.remove('start', 'goal', 'obstacle');
+            });
+            
+            // Set start position
+            if (startPosition) {
+                const startCell = document.querySelector(`.cell[data-row="${startPosition[0]}"][data-col="${startPosition[1]}"]`);
+                if (startCell) startCell.classList.add('start');
+            }
+            
+            // Set goal position
+            if (goalPosition) {
+                const goalCell = document.querySelector(`.cell[data-row="${goalPosition[0]}"][data-col="${goalPosition[1]}"]`);
+                if (goalCell) goalCell.classList.add('goal');
+            }
+            
+            // Set obstacles
+            obstacles.forEach(obs => {
+                const obstacleCell = document.querySelector(`.cell[data-row="${obs[0]}"][data-col="${obs[1]}"]`);
+                if (obstacleCell) obstacleCell.classList.add('obstacle');
+            });
+        }
+    </script>
+</body>
+</html>
